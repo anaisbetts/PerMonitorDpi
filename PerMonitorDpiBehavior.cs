@@ -32,8 +32,7 @@ namespace PerMonitorDPI
         public PerMonitorDpiBehavior(Window mainWindow)
         {
             AssociatedObject = mainWindow;
-            OnAttached();
-
+            mainWindow.Loaded += (o, e) => OnAttached();
             mainWindow.Closing += (o, e) => OnDetaching();
         }
 
