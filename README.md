@@ -1,6 +1,6 @@
 ## PerMonitorDpi
 
-Enable Windows 8.1+ Per-Monitor DPI support for Desktop WPF Apps. Instead of attempting to understand [this long MSDN article](http://msdn.microsoft.com/en-us/library/ms701681(v=vs.85).aspx), take advantage of my personal suffering and use this instead:
+Enable Windows 8.1+ Per-Monitor DPI support for Desktop WPF Apps. Instead of attempting to understand [this long MSDN article](http://msdn.microsoft.com/en-us/library/windows/desktop/ee308410(v=vs.85).aspx), take advantage of my personal suffering and use this instead:
 
 ```sh
 Install-Package PerMonitorDpi
