@@ -1,0 +1,160 @@
+﻿using System;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Runtime.InteropServices;
+using System.Drawing;
+
+namespace PerMonitorDPI
+{
+    public class PerMonitorDpiBehavior
+    {    
+        HwndSource hwndSource;
+        IntPtr hwnd;
+        double currentDpiRatio;
+
+        Window AssociatedObject;
+
+        static PerMonitorDpiBehavior()
+        {
+            if (IsWindows81OrHigher()) 
+            {
+                // NB: We need to call this early before we start doing any 
+                // fiddling with window coordinates / geometry
+                SafeNativeMethods.SetProcessDpiAwareness(PROCESS_DPI_AWARENESS.PROCESS_PER_MONITOR_DPI_AWARE);
+            }
+        }
+
+        public PerMonitorDpiBehavior(Window mainWindow)
+        {
+            AssociatedObject = mainWindow;
+            OnAttached();
+
+            mainWindow.Closing += (o, e) => OnDetaching();
+        }
+
+        protected void OnAttached()
+        {
+            if (AssociatedObject.IsInitialized)
+            {
+                AddHwndHook();
+            }
+            else
+            {
+                AssociatedObject.SourceInitialized += AssociatedObject_SourceInitialized;
+            }
+
+            // NB: This allows us to drag-drop URLs from IE11, which would 
+            // normally fail because we run at Medium integrity and most of
+            // IE runs at Low or AppContainer level.
+            EnableDragDropFromLowPrivUIPIProcesses();
+        }
+
+        protected void OnDetaching()
+        {
+            RemoveHwndHook();
+        }
+
+        void AddHwndHook()
+        {
+            hwndSource = PresentationSource.FromVisual(AssociatedObject) as HwndSource;
+            hwndSource.AddHook(HwndHook);
+            hwnd = new WindowInteropHelper(AssociatedObject).Handle;
+        }
+
+        void RemoveHwndHook()
+        {
+            AssociatedObject.SourceInitialized -= AssociatedObject_SourceInitialized;
+            hwndSource.RemoveHook(HwndHook);
+        }
+
+        void AssociatedObject_SourceInitialized(object sender, EventArgs e)
+        {
+            AddHwndHook();
+
+            currentDpiRatio = GetScaleRatioForWindow();
+            UpdateDpiScaling(currentDpiRatio);
+        }
+
+        static void EnableDragDropFromLowPrivUIPIProcesses()
+        {
+            // UIPI was introduced on Vista
+            if (Environment.OSVersion.Version.Major < 6) return;
+            var msgs = new uint[] 
+            {
+                0x233,      // WM_DROPFILES
+                0x48,       // WM_COPYDATA
+                0x49,       // NOBODY KNOWS BUT EVERYONE SAYS TO DO IT
+            };
+
+            foreach (var msg in msgs) 
+            {
+                SafeNativeMethods.ChangeWindowMessageFilter(msg, ChangeWindowMessageFilterFlags.Add);
+            }
+        }
+
+        [SuppressMessage("Microsoft.Usage", "CA1806:DoNotIgnoreMethodResults", MessageId = "GitHub.Extensions.Windows.Native.UnsafeNativeMethods.DwmExtendFrameIntoClientArea(System.IntPtr,GitHub.Extensions.Windows.Native.MARGINS@)")]
+        IntPtr HwndHook(IntPtr hWnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            switch (message)
+            {
+                case NativeConstants.WM_DPICHANGED:
+                    var rect = (RECT)Marshal.PtrToStructure(lParam, typeof(RECT));
+
+                    SafeNativeMethods.SetWindowPos(hWnd, IntPtr.Zero,
+                        rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,
+                        SetWindowPosFlags.DoNotChangeOwnerZOrder | SetWindowPosFlags.DoNotActivate | SetWindowPosFlags.IgnoreZOrder);
+
+                    var newDpiRatio = GetScaleRatioForWindow();
+                    if (newDpiRatio != currentDpiRatio) UpdateDpiScaling(newDpiRatio);
+
+                    break;
+            }
+
+            return IntPtr.Zero;
+        }
+
+        void UpdateDpiScaling(double newDpiRatio)
+        {
+            currentDpiRatio = newDpiRatio;
+
+            var firstChild = (Visual)VisualTreeHelper.GetChild(AssociatedObject, 0);
+            firstChild.SetValue(Window.LayoutTransformProperty, new ScaleTransform(currentDpiRatio, currentDpiRatio));
+        }
+
+        static bool? isWin81OrHigher = null;
+        static bool IsWindows81OrHigher()
+        {
+            if (isWin81OrHigher != null) return isWin81OrHigher.Value;
+
+            var notepad = Environment.ExpandEnvironmentVariables("%SystemRoot%\\Notepad.exe");
+            var realOsVersion = FileVersionInfo.GetVersionInfo(notepad);
+
+            isWin81OrHigher = (new Version(realOsVersion.ProductVersion) >= new Version(6, 3, 0, 0));
+            return isWin81OrHigher.Value;
+        }
+
+        double GetScaleRatioForWindow()
+        {
+            var wpfDpi = 96.0 * PresentationSource.FromVisual(Application.Current.MainWindow).CompositionTarget.TransformToDevice.M11;
+
+            if (IsWindows81OrHigher() == false) 
+            {
+                return wpfDpi / 96.0;
+            } 
+            else 
+            {
+                var monitor = SafeNativeMethods.MonitorFromWindow(hwndSource.Handle, MonitorOpts.MONITOR_DEFAULTTONEAREST);
+
+                uint dpiX; uint dpiY;
+                SafeNativeMethods.GetDpiForMonitor(monitor, MonitorDpiType.MDT_EFFECTIVE_DPI, out dpiX, out dpiY);
+
+                return ((double)dpiX) / wpfDpi;
+            }
+        }
+    }
+}
