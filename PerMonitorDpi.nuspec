@@ -7,5 +7,9 @@
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>WPF Behavior to transparently add per-monitor DPI support to your app</description>
     </metadata>
-    <files />
+    <files>
+        <file src="Content\DisableSystemDpiAwareness.cs" target="content\DisableSystemDpiAwareness.cs" />
+        <file src="bin\Release\PerMonitorDpi.dll" target="lib\net40\PerMonitorDpi.dll" />
+        <file src="bin\Release\PerMonitorDpi.pdb" target="lib\net40\PerMonitorDpi.pdb" />
+    </files>
 </package>
