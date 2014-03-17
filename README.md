@@ -16,3 +16,7 @@ public MainWindow()
 ```
 
 To observe the difference, attach a normal monitor to a Surface Pro 2 or other Retina-DPI monitor, then move your window between the two monitors. Per-Monitor DPI apps will stay sharp, normal apps will have blurred text on the Retina monitor.
+
+### What happens on older versions of Windows?
+
+The Right Thing™ :)  Older versions of Windows will use the system-wide DPI information instead.
