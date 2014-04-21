@@ -130,8 +130,8 @@ namespace PerMonitorDPI
         {
             if (isWin81OrHigher != null) return isWin81OrHigher.Value;
 
-            var notepad = Environment.ExpandEnvironmentVariables("%SystemRoot%\\Notepad.exe");
-            var realOsVersion = FileVersionInfo.GetVersionInfo(notepad);
+            var thekernel = Environment.ExpandEnvironmentVariables("%SystemRoot%\\System32\\ntoskrnl.exe");
+            var realOsVersion = FileVersionInfo.GetVersionInfo(thekernel);
 
             isWin81OrHigher = (new Version(realOsVersion.ProductVersion) >= new Version(6, 3, 0, 0));
             return isWin81OrHigher.Value;
