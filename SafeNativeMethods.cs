@@ -120,22 +120,29 @@ namespace PerMonitorDPI
         [ResourceExposure(ResourceScope.None)]
         private static extern IntPtr GetProcAddress(IntPtr hModule, String methodName);
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto, BestFitMapping = false, SetLastError = true)]
-        [ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
-        [ResourceExposure(ResourceScope.Process)]  // Is your module side-by-side?
-        private static extern IntPtr GetModuleHandle(String moduleName);
+        [DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+        [ResourceExposure(ResourceScope.Process)]
+        private static extern IntPtr LoadLibrary(string libFilename);
+
+        [DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+        [ResourceExposure(ResourceScope.Process)]
+        private static extern bool FreeLibrary(IntPtr hModule);
+        
 
         [System.Security.SecurityCritical]  // auto-generated
         internal static bool DoesWin32MethodExist(String moduleName, String methodName)
         {
-            // GetModuleHandle does not increment the module's ref count, so we don't need to call FreeLibrary.
-            IntPtr hModule = GetModuleHandle(moduleName);
+            IntPtr hModule = LoadLibrary(moduleName);
+          
             if (hModule == IntPtr.Zero)
             {
-                Debug.Assert(hModule != IntPtr.Zero, "GetModuleHandle failed.  Dll isn't loaded?");
+                Debug.Assert(hModule != IntPtr.Zero, "LoadLibrary failed. API must not be available");
                 return false;
             }
             IntPtr functionPointer = GetProcAddress(hModule, methodName);
+
+            FreeLibrary(hModule);
+
             return (functionPointer != IntPtr.Zero);
         }
     }
