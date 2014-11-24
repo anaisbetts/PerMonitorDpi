@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
@@ -104,6 +107,37 @@ namespace PerMonitorDPI
 
         [DllImport("shcore.dll")]
         internal static extern uint GetDpiForMonitor(IntPtr hmonitor, MonitorDpiType dpiType, out uint dpiX, out uint dpiY);
+
+
+        // Note: this methods are taken from https://raw.githubusercontent.com/Microsoft/referencesource/9da503f9ef21e8d1f2905c78d4e3e5cbb3d6f85a/mscorlib/microsoft/win32/win32native.cs
+
+        // Note - do NOT use this to call methods.  Use P/Invoke, which will
+        // do much better things w.r.t. marshaling, pinning memory, security 
+        // stuff, better interactions with thread aborts, etc.  This is used
+        // solely by DoesWin32MethodExist for avoiding try/catch EntryPointNotFoundException
+        // in scenarios where an OS Version check is insufficient
+        [DllImport("kernel32.dll", CharSet = CharSet.Ansi, BestFitMapping = false, SetLastError = true, ExactSpelling = true)]
+        [ResourceExposure(ResourceScope.None)]
+        private static extern IntPtr GetProcAddress(IntPtr hModule, String methodName);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, BestFitMapping = false, SetLastError = true)]
+        [ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
+        [ResourceExposure(ResourceScope.Process)]  // Is your module side-by-side?
+        private static extern IntPtr GetModuleHandle(String moduleName);
+
+        [System.Security.SecurityCritical]  // auto-generated
+        internal static bool DoesWin32MethodExist(String moduleName, String methodName)
+        {
+            // GetModuleHandle does not increment the module's ref count, so we don't need to call FreeLibrary.
+            IntPtr hModule = GetModuleHandle(moduleName);
+            if (hModule == IntPtr.Zero)
+            {
+                Debug.Assert(hModule != IntPtr.Zero, "GetModuleHandle failed.  Dll isn't loaded?");
+                return false;
+            }
+            IntPtr functionPointer = GetProcAddress(hModule, methodName);
+            return (functionPointer != IntPtr.Zero);
+        }
     }
 
     [Serializable]
