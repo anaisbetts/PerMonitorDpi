@@ -205,7 +205,7 @@ namespace PerMonitorDPI
         /// <summary> Determine if 2 RECT are equal (deep compare) </summary>
         public override bool Equals(object obj)
         {
-            if (!(obj is Rect))
+            if (!(obj is RECT))
             {
                 return false;
             }
