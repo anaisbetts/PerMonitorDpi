@@ -21,7 +21,7 @@ namespace PerMonitorDPI
 
         static PerMonitorDpiBehavior()
         {
-            if (IsWindows81OrHigher()) 
+            if (IsHighDpiMethodSupported()) 
             {
                 // NB: We need to call this early before we start doing any 
                 // fiddling with window coordinates / geometry
@@ -125,23 +125,21 @@ namespace PerMonitorDPI
             firstChild.SetValue(Window.LayoutTransformProperty, new ScaleTransform(currentDpiRatio, currentDpiRatio));
         }
 
-        static bool? isWin81OrHigher = null;
-        static bool IsWindows81OrHigher()
+        static bool? isHighDpiMethodSupported = null;
+        static bool IsHighDpiMethodSupported()
         {
-            if (isWin81OrHigher != null) return isWin81OrHigher.Value;
+            if (isHighDpiMethodSupported != null) return isHighDpiMethodSupported.Value;
 
-            var thekernel = Environment.ExpandEnvironmentVariables("%SystemRoot%\\System32\\ntoskrnl.exe");
-            var realOsVersion = FileVersionInfo.GetVersionInfo(thekernel);
+            isHighDpiMethodSupported = SafeNativeMethods.DoesWin32MethodExist("shcore.dll", "SetProcessDpiAwareness");
 
-            isWin81OrHigher = (new Version(realOsVersion.ProductVersion) >= new Version(6, 3, 0, 0));
-            return isWin81OrHigher.Value;
+            return isHighDpiMethodSupported.Value;
         }
 
         double GetScaleRatioForWindow()
         {
             var wpfDpi = 96.0 * PresentationSource.FromVisual(Application.Current.MainWindow).CompositionTarget.TransformToDevice.M11;
 
-            if (IsWindows81OrHigher() == false) 
+            if (IsHighDpiMethodSupported() == false) 
             {
                 return wpfDpi / 96.0;
             } 

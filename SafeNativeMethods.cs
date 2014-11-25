@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
@@ -104,6 +107,44 @@ namespace PerMonitorDPI
 
         [DllImport("shcore.dll")]
         internal static extern uint GetDpiForMonitor(IntPtr hmonitor, MonitorDpiType dpiType, out uint dpiX, out uint dpiY);
+
+
+        // Note: this methods are taken from https://raw.githubusercontent.com/Microsoft/referencesource/9da503f9ef21e8d1f2905c78d4e3e5cbb3d6f85a/mscorlib/microsoft/win32/win32native.cs
+
+        // Note - do NOT use this to call methods.  Use P/Invoke, which will
+        // do much better things w.r.t. marshaling, pinning memory, security 
+        // stuff, better interactions with thread aborts, etc.  This is used
+        // solely by DoesWin32MethodExist for avoiding try/catch EntryPointNotFoundException
+        // in scenarios where an OS Version check is insufficient
+        [DllImport("kernel32.dll", CharSet = CharSet.Ansi, BestFitMapping = false, SetLastError = true, ExactSpelling = true)]
+        [ResourceExposure(ResourceScope.None)]
+        private static extern IntPtr GetProcAddress(IntPtr hModule, String methodName);
+
+        [DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+        [ResourceExposure(ResourceScope.Process)]
+        private static extern IntPtr LoadLibrary(string libFilename);
+
+        [DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+        [ResourceExposure(ResourceScope.Process)]
+        private static extern bool FreeLibrary(IntPtr hModule);
+        
+
+        [System.Security.SecurityCritical]  // auto-generated
+        internal static bool DoesWin32MethodExist(String moduleName, String methodName)
+        {
+            IntPtr hModule = LoadLibrary(moduleName);
+          
+            if (hModule == IntPtr.Zero)
+            {
+                Debug.Assert(hModule != IntPtr.Zero, "LoadLibrary failed. API must not be available");
+                return false;
+            }
+            IntPtr functionPointer = GetProcAddress(hModule, methodName);
+
+            FreeLibrary(hModule);
+
+            return (functionPointer != IntPtr.Zero);
+        }
     }
 
     [Serializable]
