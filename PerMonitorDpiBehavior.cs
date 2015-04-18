@@ -11,6 +11,39 @@ using System.Drawing;
 
 namespace PerMonitorDPI
 {
+    public static class MonitorDpi
+    {
+        static bool? isHighDpiMethodSupported = null;
+        public static bool IsHighDpiMethodSupported()
+        {
+            if (isHighDpiMethodSupported != null) return isHighDpiMethodSupported.Value;
+
+            isHighDpiMethodSupported = SafeNativeMethods.DoesWin32MethodExist("shcore.dll", "SetProcessDpiAwareness");
+
+            return isHighDpiMethodSupported.Value;
+        }
+
+        public static double GetScaleRatioForWindow(Window This)
+        {
+            var wpfDpi = 96.0 * PresentationSource.FromVisual(Application.Current.MainWindow).CompositionTarget.TransformToDevice.M11;
+            var hwndSource = PresentationSource.FromVisual(This) as HwndSource;
+
+            if (IsHighDpiMethodSupported() == false)
+            {
+                return wpfDpi / 96.0;
+            }
+            else
+            {
+                var monitor = SafeNativeMethods.MonitorFromWindow(hwndSource.Handle, MonitorOpts.MONITOR_DEFAULTTONEAREST);
+
+                uint dpiX; uint dpiY;
+                SafeNativeMethods.GetDpiForMonitor(monitor, MonitorDpiType.MDT_EFFECTIVE_DPI, out dpiX, out dpiY);
+
+                return ((double)dpiX) / wpfDpi;
+            }
+        }
+    }
+
     public class PerMonitorDpiBehavior
     {    
         HwndSource hwndSource;
@@ -21,7 +54,7 @@ namespace PerMonitorDPI
 
         static PerMonitorDpiBehavior()
         {
-            if (IsHighDpiMethodSupported()) 
+            if (MonitorDpi.IsHighDpiMethodSupported())
             {
                 // NB: We need to call this early before we start doing any 
                 // fiddling with window coordinates / geometry
@@ -75,7 +108,7 @@ namespace PerMonitorDPI
         {
             AddHwndHook();
 
-            currentDpiRatio = GetScaleRatioForWindow();
+            currentDpiRatio = MonitorDpi.GetScaleRatioForWindow(AssociatedObject);
             UpdateDpiScaling(currentDpiRatio);
         }
 
@@ -108,7 +141,7 @@ namespace PerMonitorDPI
                         rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,
                         SetWindowPosFlags.DoNotChangeOwnerZOrder | SetWindowPosFlags.DoNotActivate | SetWindowPosFlags.IgnoreZOrder);
 
-                    var newDpiRatio = GetScaleRatioForWindow();
+                    var newDpiRatio = MonitorDpi.GetScaleRatioForWindow(AssociatedObject);
                     if (newDpiRatio != currentDpiRatio) UpdateDpiScaling(newDpiRatio);
 
                     break;
@@ -125,33 +158,5 @@ namespace PerMonitorDPI
             firstChild.SetValue(Window.LayoutTransformProperty, new ScaleTransform(currentDpiRatio, currentDpiRatio));
         }
 
-        static bool? isHighDpiMethodSupported = null;
-        static bool IsHighDpiMethodSupported()
-        {
-            if (isHighDpiMethodSupported != null) return isHighDpiMethodSupported.Value;
-
-            isHighDpiMethodSupported = SafeNativeMethods.DoesWin32MethodExist("shcore.dll", "SetProcessDpiAwareness");
-
-            return isHighDpiMethodSupported.Value;
-        }
-
-        double GetScaleRatioForWindow()
-        {
-            var wpfDpi = 96.0 * PresentationSource.FromVisual(Application.Current.MainWindow).CompositionTarget.TransformToDevice.M11;
-
-            if (IsHighDpiMethodSupported() == false) 
-            {
-                return wpfDpi / 96.0;
-            } 
-            else 
-            {
-                var monitor = SafeNativeMethods.MonitorFromWindow(hwndSource.Handle, MonitorOpts.MONITOR_DEFAULTTONEAREST);
-
-                uint dpiX; uint dpiY;
-                SafeNativeMethods.GetDpiForMonitor(monitor, MonitorDpiType.MDT_EFFECTIVE_DPI, out dpiX, out dpiY);
-
-                return ((double)dpiX) / wpfDpi;
-            }
-        }
     }
 }
