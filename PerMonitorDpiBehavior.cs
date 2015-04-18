@@ -12,7 +12,7 @@ using System.Drawing;
 namespace PerMonitorDPI
 {
     public static class MonitorDpi
-    {
+    { 
         static bool? isHighDpiMethodSupported = null;
         public static bool IsHighDpiMethodSupported()
         {
@@ -28,11 +28,11 @@ namespace PerMonitorDPI
             var wpfDpi = 96.0 * PresentationSource.FromVisual(Application.Current.MainWindow).CompositionTarget.TransformToDevice.M11;
             var hwndSource = PresentationSource.FromVisual(This) as HwndSource;
 
-            if (IsHighDpiMethodSupported() == false)
+            if (IsHighDpiMethodSupported() == false) 
             {
                 return wpfDpi / 96.0;
-            }
-            else
+            } 
+            else 
             {
                 var monitor = SafeNativeMethods.MonitorFromWindow(hwndSource.Handle, MonitorOpts.MONITOR_DEFAULTTONEAREST);
 
@@ -54,7 +54,7 @@ namespace PerMonitorDPI
 
         static PerMonitorDpiBehavior()
         {
-            if (MonitorDpi.IsHighDpiMethodSupported())
+            if (MonitorDpi.IsHighDpiMethodSupported()) 
             {
                 // NB: We need to call this early before we start doing any 
                 // fiddling with window coordinates / geometry

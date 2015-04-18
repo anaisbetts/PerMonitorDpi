@@ -139,10 +139,10 @@ namespace PerMonitorDPI
                 Debug.Assert(hModule != IntPtr.Zero, "LoadLibrary failed. API must not be available");
                 return false;
             }
+
             IntPtr functionPointer = GetProcAddress(hModule, methodName);
 
             FreeLibrary(hModule);
-
             return (functionPointer != IntPtr.Zero);
         }
     }
