@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
         <id>PerMonitorDpi</id>
-        <version>1.1.0</version>
+        <version>1.1.1</version>
         <authors>Paul Betts</authors>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>WPF Behavior to transparently add per-monitor DPI support to your app</description>
