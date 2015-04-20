@@ -23,24 +23,30 @@ namespace PerMonitorDPI
             return isHighDpiMethodSupported.Value;
         }
 
-        public static double GetScaleRatioForWindow(Window This)
+        public static double GetScaleRatioForWindow(IntPtr hWnd)
         {
             var wpfDpi = 96.0 * PresentationSource.FromVisual(Application.Current.MainWindow).CompositionTarget.TransformToDevice.M11;
-            var hwndSource = PresentationSource.FromVisual(This) as HwndSource;
 
             if (IsHighDpiMethodSupported() == false) 
             {
+                // Use System DPI
                 return wpfDpi / 96.0;
             } 
             else 
             {
-                var monitor = SafeNativeMethods.MonitorFromWindow(hwndSource.Handle, MonitorOpts.MONITOR_DEFAULTTONEAREST);
+                var monitor = SafeNativeMethods.MonitorFromWindow(hWnd, MonitorOpts.MONITOR_DEFAULTTONEAREST);
 
                 uint dpiX; uint dpiY;
                 SafeNativeMethods.GetDpiForMonitor(monitor, MonitorDpiType.MDT_EFFECTIVE_DPI, out dpiX, out dpiY);
 
                 return ((double)dpiX) / wpfDpi;
             }
+        }
+
+        public static double GetScaleRatioForWindow(Window This)
+        {
+            var hwndSource = PresentationSource.FromVisual(This) as HwndSource;
+            return GetScaleRatioForWindow(hwndSource.Handle);
         }
     }
 
