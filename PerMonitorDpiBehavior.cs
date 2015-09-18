@@ -80,6 +80,17 @@ namespace PerMonitorDPI
             if (AssociatedObject.IsInitialized)
             {
                 AddHwndHook();
+                
+                currentDpiRatio = MonitorDpi.GetScaleRatioForWindow(AssociatedObject);
+                
+                if (currentDpiRatio != 1.0)
+                {
+                    //Update Width and Height based on the on the current DPI of the monitor
+                    AssociatedObject.Width = AssociatedObject.Width * currentDpiRatio;
+                    AssociatedObject.Height = AssociatedObject.Height * currentDpiRatio;
+
+                    UpdateDpiScaling(currentDpiRatio);
+                }
             }
             else
             {
@@ -160,8 +171,11 @@ namespace PerMonitorDPI
         {
             currentDpiRatio = newDpiRatio;
 
-            var firstChild = (Visual)VisualTreeHelper.GetChild(AssociatedObject, 0);
-            firstChild.SetValue(Window.LayoutTransformProperty, new ScaleTransform(currentDpiRatio, currentDpiRatio));
+            var content = AssociatedObject.Content as FrameworkElement;
+            if (content != null)
+            {
+                content.LayoutTransform = new ScaleTransform(currentDpiRatio, currentDpiRatio);
+            }
         }
 
     }
